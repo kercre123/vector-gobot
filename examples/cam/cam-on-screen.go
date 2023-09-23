@@ -39,14 +39,20 @@ func main() {
 	vscreen.InitLCD()
 	vscreen.BlackOut()
 	fmt.Println("Show camera data on screen...")
+	ticker := time.NewTicker(33 * time.Millisecond)
+	defer ticker.Stop()
+
 	for {
-		frame, err := vcam.GetFrame()
-		if err != nil {
-			fmt.Println("error getting frame: ", err)
-			os.Exit(1)
+		select {
+		case <-ticker.C:
+			frame, err := vcam.GetFrame()
+			if err != nil {
+				fmt.Println("error getting frame: ", err)
+				os.Exit(1)
+			}
+			scrnData := GetFrameAsUint16Array(frame, 1280, 720)
+			vscreen.SetScreen(scrnData)
+			//time.Sleep(time.Millisecond * 20)
 		}
-		scrnData := GetFrameAsUint16Array(frame, 1280, 720)
-		vscreen.SetScreen(scrnData)
-		time.Sleep(time.Millisecond * 20)
 	}
 }
