@@ -1,0 +1,6 @@
+[submodule "vic-toolchain"]
+	path = vic-toolchain
+	url = https://github.com/kercre123/vic-toolchain.git
+[submodule "libjpeg-turbo"]
+	path = libjpeg-turbo
+	url = https://github.com/libjpeg-turbo/libjpeg-turbo
