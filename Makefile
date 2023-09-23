@@ -17,6 +17,7 @@ all: vector-gobot jpeg_interface
 	echo "Successfully compiled libvector-gobot.so and libjpeg_interface.so to ./build."
 
 vector-gobot:
+	mkdir -p build
 	$(TOOLCHAIN)g++ \
 	$(GPP_FLAGS) $(COMMON_FLAGS) \
 	-o build/libvector-gobot.so \
@@ -24,9 +25,11 @@ vector-gobot:
 	c_src/libs/*.cpp
 
 libjpeg-turbo:
+	mkdir -p build
 	./make-turbojpeg.sh
 
 jpeg_interface:
+	mkdir -p build
 	$(TOOLCHAIN)g++ $(GPP_FLAGS) $(COMMON_FLAGS) -o build/libjpeg_interface.so c_src/jpeg/jpeg.cpp -Ilibjpeg-turbo -fopenmp
 
 example:
@@ -38,6 +41,7 @@ example:
 	go build -o build/main $(COMPILEFILE)
 
 clean:
+	mkdir -p build
 	rm -f build/libvector-gobot.so build/libjpeg_interface.so build/libjpeg_turbo build/main
 
 .PHONY: all librobot.so vector-gobot jpeg_interface example clean libjpeg-turbo
