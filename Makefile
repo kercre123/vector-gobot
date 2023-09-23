@@ -34,7 +34,7 @@ jpeg_interface:
 
 example:
 	CC="$(TOOLCHAIN)gcc" \
-	 CGO_LDFLAGS="-Lbuild" \
+	CGO_LDFLAGS="-Lbuild" \
 	GOARM=7 \
 	GOARCH=arm \
 	CGO_ENABLED=1 \

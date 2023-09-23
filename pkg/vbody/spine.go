@@ -29,9 +29,10 @@ type MotorStatus [4]struct {
 
 // This is the data each spine frame from GetFrame() contains.
 type DataFrame struct {
-	mu                 sync.Mutex
-	Seq                uint32
-	Cliffs             [4]uint32
+	mu     sync.Mutex
+	Seq    uint32
+	Cliffs [4]uint32
+	// right wheel, left wheel, lift, head
 	Encoders           MotorStatus
 	BattVoltage        int16
 	ChargerVoltage     int16
@@ -46,19 +47,17 @@ type DataFrame struct {
 	ProxSPADCount      uint16
 	ProxSampleCount    uint16
 	ProxCalibResult    uint32
-	ProxRealMM         uint16
-	Test               float64
 }
 
-var Spine_Handle int
-var Spine_Initiated bool
-var Motor_1 int16
-var Motor_2 int16
-var Motor_3 int16
-var Motor_4 int16
-var FrontLEDStatus uint32 = LED_OFF
-var MiddleLEDStatus uint32 = LED_OFF
-var BackLEDStatus uint32 = LED_OFF
+var spineHandle int
+var SpineInited bool
+var motor1 int16
+var motor2 int16
+var motor3 int16
+var motor4 int16
+var frontLEDStatus uint32 = LED_OFF
+var middleLEDStatus uint32 = LED_OFF
+var backLEDStatus uint32 = LED_OFF
 
 /*
 Init spine communication. This must be run before you try to get a frame.
@@ -66,21 +65,21 @@ Starts getting and sending frames, filling the CurrentDataFrame buffer.
 Checks if body is functional.
 */
 func InitSpine() error {
-	if Spine_Initiated {
-		fmt.Println("Spine already initiated, handle " + fmt.Sprint(Spine_Handle))
+	if SpineInited {
+		fmt.Println("Spine already initiated, handle " + fmt.Sprint(spineHandle))
 		return nil
 	}
 	handle := C.spine_full_init()
 	if handle > 0 {
-		Spine_Initiated = true
+		SpineInited = true
 		err := startCommsLoop()
 		if err != nil {
 			fmt.Println("error initializing spine. is vic-robot still alive?")
-			Spine_Initiated = false
+			SpineInited = false
 			return err
 		}
 	} else {
-		Spine_Initiated = false
+		SpineInited = false
 		fmt.Println("error initializing spine. is vic-robot still alive?")
 		return errors.New("spine handle is 0")
 	}
@@ -91,8 +90,8 @@ func InitSpine() error {
 Close communication channel with body, stop sending/getting frames.
 */
 func StopSpine() {
-	if Spine_Initiated {
-		Spine_Initiated = false
+	if SpineInited {
+		SpineInited = false
 		time.Sleep(time.Millisecond * 50)
 		C.close_spine()
 	}
@@ -102,23 +101,23 @@ func StopSpine() {
 Use LED_GREEN, LED_BLUE, and LED_RED consts as reference.
 */
 func SetLEDs(front uint32, middle uint32, back uint32) error {
-	if !Spine_Initiated {
+	if !SpineInited {
 		return errors.New("initiate spine first")
 	}
-	FrontLEDStatus, MiddleLEDStatus, BackLEDStatus = front, middle, back
+	frontLEDStatus, middleLEDStatus, backLEDStatus = front, middle, back
 	return nil
 }
 
 // rwheel, lwheel, lift, head
 func startCommsLoop() error {
-	if !Spine_Initiated {
+	if !SpineInited {
 		return errors.New("initiate spine first")
 	}
 
 	// check if body is responding
 	// read 10 frames, make sure touch sensor is providing valid data
 	for i := 0; i <= 10; i++ {
-		if !Spine_Initiated {
+		if !SpineInited {
 			return errors.New("spine became uninitialized during comms loop start")
 		}
 		CurrentDataFrame.mu.Lock()
@@ -137,18 +136,18 @@ func startCommsLoop() error {
 
 	go func() {
 		for {
-			if !Spine_Initiated {
+			if !SpineInited {
 				return
 			}
-			var motors []int16 = []int16{Motor_1, Motor_2, Motor_3, Motor_4}
-			var leds []uint32 = []uint32{BackLEDStatus, MiddleLEDStatus, FrontLEDStatus, FrontLEDStatus}
+			var motors []int16 = []int16{motor1, motor2, motor3, motor4}
+			var leds []uint32 = []uint32{backLEDStatus, middleLEDStatus, frontLEDStatus, frontLEDStatus}
 			C.spine_full_update(C.uint32_t(8888), (*C.int16_t)(&motors[0]), (*C.uint32_t)(&leds[0]))
 			time.Sleep(time.Millisecond * 10)
 		}
 	}()
 	go func() {
 		for {
-			if !Spine_Initiated {
+			if !SpineInited {
 				return
 			}
 			CurrentDataFrame.mu.Lock()
@@ -166,10 +165,10 @@ Order (relative to robot): right wheel, left wheel, lift, head
 */
 func SetMotors(m1 int16, m2 int16, m3 int16, m4 int16) error {
 	m2 = -(m2)
-	if !Spine_Initiated {
+	if !SpineInited {
 		return errors.New("initiate spine first")
 	}
-	Motor_1, Motor_2, Motor_3, Motor_4 = m1*100, m2*100, m3*100, m4*100
+	motor1, motor2, motor3, motor4 = m1*100, m2*100, m3*100, m4*100
 	return nil
 }
 
@@ -177,7 +176,7 @@ func SetMotors(m1 int16, m2 int16, m3 int16, m4 int16) error {
 Return current DataFrame from body.
 */
 func GetFrame() (*DataFrame, error) {
-	if !Spine_Initiated {
+	if !SpineInited {
 		return &DataFrame{}, fmt.Errorf("spine is not inited")
 	}
 	CurrentDataFrame.mu.Lock()
@@ -186,7 +185,7 @@ func GetFrame() (*DataFrame, error) {
 }
 
 func readFrame() error {
-	if !Spine_Initiated {
+	if !SpineInited {
 		return errors.New("spine not inited")
 	}
 	df := C.iterate()
@@ -222,7 +221,6 @@ func readFrame() error {
 	CurrentDataFrame.ProxSampleCount = uint16(df.prox_sample_count)
 	CurrentDataFrame.ProxCalibResult = uint32(df.prox_calibration_result)
 	//CurrentDataFrame.ProxRealMM = uint16(float64(CurrentDataFrame.ProxRawRangeMM) * (float64(CurrentDataFrame.ProxSignalRateMCPS) / float64(CurrentDataFrame.ProxAmbient)))
-	CurrentDataFrame.Test = float64(CurrentDataFrame.ProxSignalRateMCPS) / float64(CurrentDataFrame.ProxSPADCount)
 	switch {
 	case df.buttton_state > 0:
 		CurrentDataFrame.ButtonState = true
@@ -243,7 +241,7 @@ typedef struct {
     uint16_t status;
     uint8_t i2c_device_fault;
     uint8_t i2c_fault_item;
-    spine_motor_status_t motors[4];
+    spine_motorstatus_t motors[4];
     uint16_t cliff_sensor[4];
     int16_t battery_voltage;
     int16_t charger_voltage;
@@ -269,5 +267,5 @@ typedef struct {
     int32_t pos;
     int32_t dlt;
     uint32_t tm;
-} spine_motor_status_t;
+} spine_motorstatus_t;
 */
