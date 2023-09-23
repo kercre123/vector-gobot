@@ -4,14 +4,14 @@ This is a Go wrapper for [poc.vic-hack](https://github.com/torimos/poc.vic-hack)
 
 ## Modules
 
--   vcam
+-   [vcam](https://pkg.go.dev/github.com/kercre123/vector-gobot/pkg/vcam)
     -   Communicates with the built-in camera daemon to get frames from the camera.
     -   Can set exposure and gain as well.
--   vbody
+-   [vbody](https://pkg.go.dev/github.com/kercre123/vector-gobot/pkg/vbody)
     -   Fully functional bodyboard communication.
--   vscreen
+-   [vscreen](https://pkg.go.dev/github.com/kercre123/vector-gobot/pkg/vscreen)
     -   Fully functional LCD communication.
--   vjpeg
+-   [vjpeg](https://pkg.go.dev/github.com/kercre123/vector-gobot/pkg/vjpeg)
     -   Meant to be used in conjunction with vcam.
     -   Takes a camera frame, unpacks it, debayers it, and converts it to JPEG as fast as possible with turbojpeg.
     -   Needs an extra lib to be built.
