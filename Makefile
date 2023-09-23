@@ -30,7 +30,8 @@ jpeg_interface:
 	$(TOOLCHAIN)g++ $(GPP_FLAGS) $(COMMON_FLAGS) -o build/libjpeg_interface.so c_src/jpeg/jpeg.cpp -Ilibjpeg-turbo -fopenmp
 
 example:
-	CC="$(TOOLCHAIN)gcc -Lbuild" \
+	CC="$(TOOLCHAIN)gcc" \
+	 CGO_LDFLAGS="-Lbuild" \
 	GOARM=7 \
 	GOARCH=arm \
 	CGO_ENABLED=1 \
