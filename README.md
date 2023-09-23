@@ -1,6 +1,6 @@
 # vector-gobot
 
-A Go wrapper for [poc.vic-hack](https://github.com/torimos/poc.vic-hack).
+This is a Go wrapper for [poc.vic-hack](https://github.com/torimos/poc.vic-hack). It allows you to directly communicate with the Anki Vector robot's hardware with easy-to-use Go functions and definitions.
 
 ## Modules
 
