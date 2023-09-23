@@ -1,7 +1,7 @@
 package vbody
 
-// #cgo LDFLAGS: -L${SRCDIR}/../.. -lvector-gobot
-// #cgo CFLAGS: -I${SRCDIR}/../../include
+// #cgo LDFLAGS: -L${SRCDIR}/../.. -lvector-gobot -ldl
+// #cgo CFLAGS: -I${SRCDIR}/../../include -w
 // #include "libvector_gobot.h"
 // #include "spine.h"
 import "C"
@@ -124,14 +124,13 @@ func startCommsLoop() error {
 		CurrentDataFrame.mu.Lock()
 		readFrame()
 		CurrentDataFrame.mu.Unlock()
-		frame := GetFrame()
+		frame, _ := GetFrame()
 		if i == 10 && frame.Touch == 0 {
 			return errors.New("body hasn't returned a valid frame after " + fmt.Sprint(i) + " tries")
 		} else if frame.Touch == 0 {
 			time.Sleep(time.Millisecond * 10)
 			continue
 		} else {
-			fmt.Println("Spine data is valid, initiating comms channel...")
 			break
 		}
 	}
@@ -158,7 +157,6 @@ func startCommsLoop() error {
 		}
 	}()
 	time.Sleep(time.Second)
-	fmt.Println("Spine comms initiated")
 	return nil
 }
 
@@ -178,13 +176,13 @@ func SetMotors(m1 int16, m2 int16, m3 int16, m4 int16) error {
 /*
 Return current DataFrame from body.
 */
-func GetFrame() *DataFrame {
+func GetFrame() (*DataFrame, error) {
 	if !Spine_Initiated {
-		fmt.Println("GetFrame(): you must initialize spine first")
+		return &DataFrame{}, fmt.Errorf("spine is not inited")
 	}
 	CurrentDataFrame.mu.Lock()
 	defer CurrentDataFrame.mu.Unlock()
-	return &CurrentDataFrame
+	return &CurrentDataFrame, nil
 }
 
 func readFrame() error {

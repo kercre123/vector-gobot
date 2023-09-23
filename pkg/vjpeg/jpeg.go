@@ -1,8 +1,8 @@
 package vjpeg
 
 /*
-#cgo CFLAGS: -I${SRCDIR}/../../include -I${SRCDIR}/../../include/libjpeg_turbo
-#cgo LDFLAGS: -lturbojpeg -ljpeg_interface
+#cgo CFLAGS: -I${SRCDIR}/../../include -I${SRCDIR}/../../libjpeg-turbo -I${SRCDIR}/../../build/libjpeg-turbo/include
+#cgo LDFLAGS: -lturbojpeg -ljpeg_interface -L${SRCDIR}/../../build/libjpeg-turbo/lib -ldl
 #include "libjpeg_interface.h"
 */
 import "C"

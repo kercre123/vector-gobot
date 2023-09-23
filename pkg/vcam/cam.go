@@ -1,7 +1,7 @@
-package vcamnew
+package vcam
 
 /*
- #cgo LDFLAGS: -L${SRCDIR}/platform/camera/vicos/camera_client -L${SRCDIR}/platform/gpio -lcamera_client -lgpio
+ #cgo LDFLAGS: -L${SRCDIR}/platform/camera/vicos/camera_client -L${SRCDIR}/platform/gpio -lcamera_client -lgpio -ldl
  #cgo CFLAGS: -I${SRCDIR}/platform/camera/vicos/camera_client -I${SRCDIR}/platform/camera/vicos/camera_client/inc -I${SRCDIR}/platform/gpio -I${SRCDIR}/platform/gpio/inc
  #include "camera_client.h"
 */
