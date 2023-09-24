@@ -15,6 +15,18 @@ spine_dataframe_t iterate();
 void init_lcd();
 void set_pixels(uint16_t *pixels);
 
+typedef struct IMUData {
+    float gx;
+    float gy;
+    float gz;
+    float ax;
+    float ay;
+    float az;
+} IMUData;
+
+int imu_init();
+IMUData getIMUData();
+
 
 #ifdef __cplusplus
 }

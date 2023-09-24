@@ -1,6 +1,6 @@
 package vscreen
 
-// #cgo LDFLAGS: -L${SRCDIR}/../.. -lvector-gobot -ldl
+// #cgo LDFLAGS: -lvector-gobot -ldl
 // #cgo CFLAGS: -I${SRCDIR}/../../include -w
 // #include "libvector_gobot.h"
 // #include "lcd.h"

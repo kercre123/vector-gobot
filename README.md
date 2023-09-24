@@ -5,12 +5,9 @@ This is a Go wrapper for [poc.vic-hack](https://github.com/torimos/poc.vic-hack)
 ## Modules
 
 -   [vcam](https://pkg.go.dev/github.com/kercre123/vector-gobot/pkg/vcam)
-    -   Communicates with the built-in camera daemon to get frames from the camera.
-    -   Can set exposure and gain as well.
 -   [vbody](https://pkg.go.dev/github.com/kercre123/vector-gobot/pkg/vbody)
-    -   Fully functional bodyboard communication.
+-   [vimu](https://pkg.go.dev/github.com/kercre123/vector-gobot/pkg/vimu)
 -   [vscreen](https://pkg.go.dev/github.com/kercre123/vector-gobot/pkg/vscreen)
-    -   Fully functional LCD communication.
 -   [vjpeg](https://pkg.go.dev/github.com/kercre123/vector-gobot/pkg/vjpeg)
     -   Meant to be used in conjunction with vcam.
     -   Takes a camera frame, unpacks it, debayers it, and converts it to JPEG as fast as possible with turbojpeg.
@@ -92,11 +89,13 @@ mount -o rw,remount,exec /data
     -   Includes a direct RGGB10-to-JPEG function
 4. Screen (vscreen)
     -   Fully working
+5. IMU (vimu)
+    -   Fully working
+    -   Polls every 10 ms
 
 ## TODO
 
 -   PCM (speaker)
--   IMU
 -   ToF sensor calculations
 -   Maybe read from calibration files
 -   Implement a way to normalize a camera image and remove distortion from lens

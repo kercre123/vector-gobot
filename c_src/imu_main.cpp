@@ -1,7 +1,9 @@
 #include "utils.h"
 #include "lcd.h"
 #include "imu.h"
+#include "libvector_gobot.h"
 
+int imuspi = 0;
 
 int imu_spi_read(int fd, unsigned char* buff, uint32_t tx_len, uint32_t rx_len)
 {
@@ -132,37 +134,31 @@ void imuInit(int spi)
 	// reg_write(spi, BMI160_RA_FIFO_CONFIG_1, 0xC2);
 }
 
-int imu_demo()
+int imu_init()
 {
 
-	int spi = open("/dev/spidev0.0", O_RDWR);
-    if (spi < 0) {
-        perror("open");
+	imuspi = open("/dev/spidev0.0", O_RDWR);
+    if (imuspi < 0) {
         return 1;
     }
 	
 	uint8_t mode = 0;
 	uint8_t bits = 8;
 	uint32_t speed = 15000000;
-    ioctl(spi, SPI_IOC_WR_MODE, (char *)&mode);
-    ioctl(spi, SPI_IOC_WR_BITS_PER_WORD, (char *)&bits);
-    ioctl(spi, SPI_IOC_WR_MAX_SPEED_HZ, (char *)&speed);
-    printf("[%lld] IMU SPI Mode=%04x Bits=%02d Speed=%04d\n", get_time(), mode,bits,speed);
+    ioctl(imuspi, SPI_IOC_WR_MODE, (char *)&mode);
+    ioctl(imuspi, SPI_IOC_WR_BITS_PER_WORD, (char *)&bits);
+    ioctl(imuspi, SPI_IOC_WR_MAX_SPEED_HZ, (char *)&speed);
 
-	imuInit(spi);
-	uint8_t reg = reg_read(spi, 0);
-    printf("BMI160 Initialized. ID = %x\n",reg);
+	imuInit(imuspi);
+	uint8_t reg = reg_read(imuspi, 0);
 	delay(10);
 
-	float gx, gy, gz;
-	float ax, ay, az;
-	for (;;) {
-		getGyro(spi, &gx,&gy,&gz);
-		getAccel(spi, &ax,&ay,&az);
-		printf("gX: %3.3f\tgY: %3.3f\tgZ: %3.3f\n",gx,gy,gz);
-		printf("aX: %3.3f\taY: %3.3f\taZ: %3.3f\n",ax,ay,az);
-		delay(100);
-	}
-
 	return 0;
+}
+
+IMUData getIMUData() {
+    IMUData data;
+    getGyro(imuspi, &data.gx, &data.gy, &data.gz);
+    getAccel(imuspi, &data.ax, &data.ay, &data.az);
+    return data;
 }
