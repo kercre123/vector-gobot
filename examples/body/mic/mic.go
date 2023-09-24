@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/binary"
-	"fmt"
 	"os"
 	"time"
 
@@ -15,24 +14,31 @@ func main() {
 		panic(err)
 	}
 	defer file.Close()
-	vbody.InitSpine()
+	err = vbody.InitSpine()
+	if err != nil {
+		panic(err)
+	}
 	shouldStop := false
 	go func() {
-		time.Sleep(time.Second * 12)
+		time.Sleep(time.Second * 10)
 		shouldStop = true
 	}()
-	ticker := time.NewTicker(time.Millisecond * 10)
-	for range ticker.C {
+	go func() {
+		vbody.SetLEDs(vbody.LED_GREEN, vbody.LED_BLUE, vbody.LED_RED)
+		vbody.SetMotors(0, 0, 0, 60)
+		time.Sleep(time.Second * 3)
+		vbody.SetMotors(0, 0, 0, 0)
+		vbody.SetMotors(0, 0, 0, -60)
+		time.Sleep(time.Second * 3)
+	}()
+	frameChan := vbody.GetFrameChan()
+	for frame := range frameChan {
 		if shouldStop {
 			return
 		}
-		frame, _ := vbody.GetFrame()
-		fmt.Println(len(frame.MicData))
-		for _, sample := range frame.MicData {
-			err := binary.Write(file, binary.BigEndian, sample)
-			if err != nil {
-				panic(err)
-			}
+		err := binary.Write(file, binary.LittleEndian, frame.MicData)
+		if err != nil {
+			panic(err)
 		}
 	}
 	vbody.StopSpine()

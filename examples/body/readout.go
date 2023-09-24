@@ -18,26 +18,18 @@ func main() {
 	}
 	fmt.Println("Initing screen...")
 	vscreen.InitLCD()
-	vbody.SetMotors(0, 0, -100, -200)
-	time.Sleep(time.Second * 2)
-	vbody.SetMotors(0, 0, 0, 300)
-	time.Sleep(time.Second * 1)
-	vbody.SetMotors(0, 0, 0, 0)
+	vbody.SetLEDs(vbody.LED_BLUE, vbody.LED_BLUE, vbody.LED_BLUE)
 	fmt.Println("Show readout of sensor values on screen for 10 seconds...")
 	exit := false
 	go func() {
 		time.Sleep(time.Second * 12)
 		exit = true
 	}()
-	for {
+	frameChan := vbody.GetFrameChan()
+	for frame := range frameChan {
 		if exit {
 			fmt.Println("Done")
 			os.Exit(0)
-		}
-		frame, err := vbody.GetFrame()
-		if err != nil {
-			fmt.Println("error getting frame: ", err)
-			os.Exit(1)
 		}
 		scrnLines := []string{
 			"Touch: " + fmt.Sprint(frame.Touch),
@@ -45,6 +37,5 @@ func main() {
 		}
 		scrnData := vscreen.CreateTextImageFromSlice(scrnLines)
 		vscreen.SetScreen(scrnData)
-		time.Sleep(time.Millisecond * 5)
 	}
 }

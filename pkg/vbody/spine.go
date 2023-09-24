@@ -8,7 +8,6 @@ import "C"
 import (
 	"errors"
 	"fmt"
-	"sync"
 	"time"
 )
 
@@ -18,11 +17,6 @@ const (
 	LED_BLUE  = 0xFF0000
 	LED_OFF   = 0x0
 )
-
-var CurrentDataFrame struct {
-	mu    sync.Mutex
-	Frame DataFrame
-}
 
 type MotorStatus [4]struct {
 	Pos int32
@@ -61,6 +55,8 @@ var frontLEDStatus uint32 = LED_OFF
 var middleLEDStatus uint32 = LED_OFF
 var backLEDStatus uint32 = LED_OFF
 
+var frameChannel chan DataFrame
+
 /*
 Check if body comms are initiated.
 */
@@ -70,7 +66,7 @@ func IsInited() bool {
 
 /*
 Init spine communication. This must be run before you try to get a frame.
-Starts getting and sending frames, filling the CurrentDataFrame buffer.
+Starts getting and sending frames, filling the currentDataFrame buffer.
 Checks if body is functional.
 */
 func InitSpine() error {
@@ -129,10 +125,7 @@ func startCommsLoop() error {
 		if !spineInited {
 			return errors.New("spine became uninitialized during comms loop start")
 		}
-		CurrentDataFrame.mu.Lock()
-		readFrame()
-		CurrentDataFrame.mu.Unlock()
-		frame, _ := GetFrame()
+		frame := readFrame()
 		if i == 10 && frame.Touch == 0 {
 			return errors.New("body hasn't returned a valid frame after " + fmt.Sprint(i) + " tries")
 		} else if frame.Touch == 0 {
@@ -143,34 +136,44 @@ func startCommsLoop() error {
 		}
 	}
 
+	frameChannel = make(chan DataFrame, 1)
+
 	go func() {
-		for {
-			ticker := time.NewTimer(time.Millisecond * 10)
-			for range ticker.C {
-				if !spineInited {
-					return
-				}
-				var motors []int16 = []int16{motor1, motor2, motor3, motor4}
-				var leds []uint32 = []uint32{backLEDStatus, middleLEDStatus, frontLEDStatus, frontLEDStatus}
-				C.spine_full_update(C.uint32_t(8888), (*C.int16_t)(&motors[0]), (*C.uint32_t)(&leds[0]))
+		ticker := time.NewTicker(time.Millisecond * 10)
+		defer ticker.Stop()
+		seq := 8888
+		for range ticker.C {
+			if !spineInited {
+				return
+			}
+			var motors []int16 = []int16{motor1, motor2, motor3, motor4}
+			var leds []uint32 = []uint32{backLEDStatus, middleLEDStatus, frontLEDStatus, frontLEDStatus}
+			C.spine_full_update(C.uint32_t(seq), (*C.int16_t)(&motors[0]), (*C.uint32_t)(&leds[0]))
+			frame := readFrame()
+			// why is this able to handle dropped frames and just frameChannel <- frame on its own doesn't?
+			select {
+			case frameChannel <- frame:
+			default:
 			}
 		}
 	}()
-	go func() {
-		for {
-			ticker := time.NewTimer(time.Millisecond * 10)
-			for range ticker.C {
-				if !spineInited {
-					return
-				}
-				CurrentDataFrame.mu.Lock()
-				readFrame()
-				CurrentDataFrame.mu.Unlock()
-			}
-		}
-	}()
+
 	time.Sleep(time.Second)
 	return nil
+}
+
+/*
+Get a frame channel. In your code, you should use it like:
+
+frameChan := GetFrameChan()
+
+	for frame := range frameChan {
+		<do whatever you need to with frame>
+		<this will repeat whenever a new frame is ready>
+	}
+*/
+func GetFrameChan() chan DataFrame {
+	return frameChannel
 }
 
 /*
@@ -186,24 +189,13 @@ func SetMotors(m1 int16, m2 int16, m3 int16, m4 int16) error {
 	return nil
 }
 
-/*
-Return current DataFrame from body.
-*/
-func GetFrame() (*DataFrame, error) {
+func readFrame() DataFrame {
+	returnFrame := DataFrame{}
 	if !spineInited {
-		return &DataFrame{}, fmt.Errorf("spine is not inited")
-	}
-	CurrentDataFrame.mu.Lock()
-	defer CurrentDataFrame.mu.Unlock()
-	return &CurrentDataFrame.Frame, nil
-}
-
-func readFrame() error {
-	if !spineInited {
-		return errors.New("spine not inited")
+		return returnFrame
 	}
 	df := C.iterate()
-	CurrentDataFrame.Frame.Seq = uint32(df.seq)
+	returnFrame.Seq = uint32(df.seq)
 	goms := MotorStatus{}
 	ms := df.motors
 	for i := range ms {
@@ -211,13 +203,13 @@ func readFrame() error {
 		goms[i].DLT = int32(ms[i].dlt)
 		goms[i].TM = uint32(ms[i].tm)
 	}
-	CurrentDataFrame.Frame.Encoders = goms
-	CurrentDataFrame.Frame.Cliffs = [4]uint32{uint32(df.cliff_sensor[0]), uint32(df.cliff_sensor[1]), uint32(df.cliff_sensor[2]), uint32(df.cliff_sensor[3])}
-	CurrentDataFrame.Frame.BattVoltage = int16(df.battery_voltage)
-	CurrentDataFrame.Frame.ChargerVoltage = int16(df.charger_voltage)
-	CurrentDataFrame.Frame.BodyTemp = int16(df.body_temp)
-	CurrentDataFrame.Frame.ProxRawRangeMM = uint16(df.prox_raw_range_mm)
-	CurrentDataFrame.Frame.Touch = uint16(df.touch_sensor)
+	returnFrame.Encoders = goms
+	returnFrame.Cliffs = [4]uint32{uint32(df.cliff_sensor[0]), uint32(df.cliff_sensor[1]), uint32(df.cliff_sensor[2]), uint32(df.cliff_sensor[3])}
+	returnFrame.BattVoltage = int16(df.battery_voltage)
+	returnFrame.ChargerVoltage = int16(df.charger_voltage)
+	returnFrame.BodyTemp = int16(df.body_temp)
+	returnFrame.ProxRawRangeMM = uint16(df.prox_raw_range_mm)
+	returnFrame.Touch = uint16(df.touch_sensor)
 	/*
 			    uint8_t prox_sigma_mm;
 		    uint16_t prox_raw_range_mm;
@@ -227,25 +219,25 @@ func readFrame() error {
 		    uint16_t prox_sample_count;
 		    uint32_t prox_calibration_result;
 	*/
-	CurrentDataFrame.Frame.ProxSigmaMM = uint8(df.prox_sigma_mm)
-	CurrentDataFrame.Frame.ProxRawRangeMM = uint16(df.prox_raw_range_mm)
-	CurrentDataFrame.Frame.ProxSignalRateMCPS = uint16(df.prox_signal_rate_mcps)
-	CurrentDataFrame.Frame.ProxAmbient = uint16(df.prox_ambient)
-	CurrentDataFrame.Frame.ProxSPADCount = uint16(df.prox_SPAD_count)
-	CurrentDataFrame.Frame.ProxSampleCount = uint16(df.prox_sample_count)
-	CurrentDataFrame.Frame.ProxCalibResult = uint32(df.prox_calibration_result)
-	//CurrentDataFrame.Frame.ProxRealMM = uint16(float64(CurrentDataFrame.Frame.ProxRawRangeMM) * (float64(CurrentDataFrame.Frame.ProxSignalRateMCPS) / float64(CurrentDataFrame.Frame.ProxAmbient)))
+	returnFrame.ProxSigmaMM = uint8(df.prox_sigma_mm)
+	returnFrame.ProxRawRangeMM = uint16(df.prox_raw_range_mm)
+	returnFrame.ProxSignalRateMCPS = uint16(df.prox_signal_rate_mcps)
+	returnFrame.ProxAmbient = uint16(df.prox_ambient)
+	returnFrame.ProxSPADCount = uint16(df.prox_SPAD_count)
+	returnFrame.ProxSampleCount = uint16(df.prox_sample_count)
+	returnFrame.ProxCalibResult = uint32(df.prox_calibration_result)
+	//returnFrame.ProxRealMM = uint16(float64(returnFrame.ProxRawRangeMM) * (float64(returnFrame.ProxSignalRateMCPS) / float64(returnFrame.ProxAmbient)))
 	switch {
 	case df.buttton_state > 0:
-		CurrentDataFrame.Frame.ButtonState = true
+		returnFrame.ButtonState = true
 	default:
-		CurrentDataFrame.Frame.ButtonState = false
+		returnFrame.ButtonState = false
 	}
-	CurrentDataFrame.Frame.MicData = []int16{}
+	returnFrame.MicData = []int16{}
 	for _, data := range df.mic_data {
-		CurrentDataFrame.Frame.MicData = append(CurrentDataFrame.Frame.MicData, int16(data))
+		returnFrame.MicData = append(returnFrame.MicData, int16(data))
 	}
-	return nil
+	return returnFrame
 }
 
 /*
