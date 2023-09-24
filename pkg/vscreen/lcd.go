@@ -18,7 +18,7 @@ import (
 	"golang.org/x/image/math/fixed"
 )
 
-var ScreenInitted bool
+var screenInitted bool
 
 /*
 Init the LCD. This must be run before any screen functions are run.
@@ -28,8 +28,15 @@ func InitLCD() {
 	exec.Command("/bin/bash", "-c", "echo 35328 > /sys/module/spidev/parameters/bufsiz").Run()
 	exec.Command("/bin/bash", "-c", "chmod 444 /sys/module/spidev/parameters/bufsiz").Run()
 	C.init_lcd()
-	ScreenInitted = true
+	screenInitted = true
 	BlackOut()
+}
+
+/*
+Check if LCD is initiated.
+*/
+func IsInited() bool {
+	return screenInitted
 }
 
 func wrapText(text string, lineWidth int) []string {
@@ -54,7 +61,7 @@ func wrapText(text string, lineWidth int) []string {
 Make every pixel on the screen black
 */
 func BlackOut() error {
-	if !ScreenInitted {
+	if !screenInitted {
 		return errors.New("init screen first")
 	}
 	pixels := make([]uint16, 184*96)
@@ -197,7 +204,7 @@ func CreateTextImageFromLines(lines []Line) []uint16 {
 Applies data to the screen
 */
 func SetScreen(pixels []uint16) error {
-	if !ScreenInitted {
+	if !screenInitted {
 		return errors.New("screen is not inited")
 	}
 	C.set_pixels((*C.uint16_t)(&pixels[0]))
@@ -207,5 +214,5 @@ func SetScreen(pixels []uint16) error {
 func StopLCD() {
 	// the program does not setup a constant communication channel with the screen
 	// this function just makes sure we don't send any data to the screen after it is run
-	ScreenInitted = false
+	screenInitted = false
 }

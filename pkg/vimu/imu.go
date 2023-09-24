@@ -30,7 +30,7 @@ var CurrentIMUFrame struct {
 }
 
 var imuSPI int
-var IMUInited bool
+var isIMUInited bool
 
 // Init the IMU, must be run before you get a frame
 func InitIMU() error {
@@ -39,7 +39,7 @@ func InitIMU() error {
 		return fmt.Errorf("error initializing imu: " + fmt.Sprint(int(spi)))
 	}
 	imuSPI = int(spi)
-	IMUInited = true
+	isIMUInited = true
 	go commsLoop()
 	time.Sleep(time.Millisecond * 200)
 	return nil
@@ -49,7 +49,7 @@ func commsLoop() {
 	ticker := time.NewTicker(time.Millisecond * 10)
 	defer ticker.Stop()
 	for range ticker.C {
-		if !IMUInited {
+		if !isIMUInited {
 			break
 		}
 		data := C.getIMUData()
@@ -64,15 +64,20 @@ func commsLoop() {
 	}
 }
 
+// Check if IMU comms are initiated
+func IsInited() bool {
+	return isIMUInited
+}
+
 // Stop the IMU. Stops comms loop
 func StopIMU() {
-	IMUInited = false
+	isIMUInited = false
 	time.Sleep(time.Millisecond * 100)
 }
 
 // Get a frame from the IMU
 func GetFrame() (IMUFrame, error) {
-	if !IMUInited {
+	if !isIMUInited {
 		return IMUFrame{}, fmt.Errorf("imu not inited")
 	}
 	CurrentIMUFrame.mu.Lock()

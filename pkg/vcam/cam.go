@@ -169,6 +169,13 @@ func StopCam() error {
 }
 
 /*
+Check if vcam is recieving frames from the camera
+*/
+func IsInited() bool {
+	return readyForFrames
+}
+
+/*
 Set exposure.
 Accepts milliseconds and gain.
 I still need to experiment with limits and combinations.
