@@ -10,7 +10,12 @@ ifeq ($(TOOLCHAIN),)
   endif
 endif
 
-COMMON_FLAGS := -O3 -mfpu=neon-vfpv4 -mfloat-abi=softfp -mcpu=cortex-a7 -ffast-math
+ifneq (,$(findstring gnueabihf,$(TOOLCHAIN)))
+    COMMON_FLAGS := -O3 -mfpu=neon-vfpv4 -mfloat-abi=hard -mcpu=cortex-a7 -ffast-math
+else
+    COMMON_FLAGS := -O3 -mfpu=neon-vfpv4 -mfloat-abi=softfp -mcpu=cortex-a7 -ffast-math
+endif
+
 GPP_FLAGS := -w -shared -Iinclude -fPIC -std=c++11
 
 all: vector-gobot jpeg_interface

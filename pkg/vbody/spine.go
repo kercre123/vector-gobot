@@ -56,6 +56,7 @@ var middleLEDStatus uint32 = LED_OFF
 var backLEDStatus uint32 = LED_OFF
 
 var frameChannel chan DataFrame
+var buttonChannel chan bool
 
 /*
 Check if body comms are initiated.
@@ -137,6 +138,7 @@ func startCommsLoop() error {
 	}
 
 	frameChannel = make(chan DataFrame, 1)
+	var frameChannelForButton = make(chan DataFrame, 1)
 
 	go func() {
 		ticker := time.NewTicker(time.Millisecond * 10)
@@ -154,6 +156,33 @@ func startCommsLoop() error {
 			select {
 			case frameChannel <- frame:
 			default:
+			}
+			select {
+			case frameChannelForButton <- frame:
+			default:
+			}
+		}
+	}()
+
+	buttonChannel = make(chan bool, 1)
+
+	go func() {
+		var bStatus bool
+		for fr := range frameChannelForButton {
+			if !spineInited {
+				return
+			}
+			if !bStatus && fr.ButtonState {
+				bStatus = true
+				select {
+				case buttonChannel <- true:
+				default:
+				}
+			} else if bStatus && !fr.ButtonState {
+				select {
+				case buttonChannel <- false:
+				default:
+				}
 			}
 		}
 	}()
@@ -187,6 +216,21 @@ func SetMotors(m1 int16, m2 int16, m3 int16, m4 int16) error {
 	}
 	motor1, motor2, motor3, motor4 = m1*100, m2*100, m3*100, m4*100
 	return nil
+}
+
+/*
+Get a button press channel.
+Sends true when press, false when released.
+
+frameChan := GetButtonChannel()
+
+	for frame := range frameChan {
+		<do whatever you need to with frame>
+		<this will repeat whenever a new frame is ready>
+	}
+*/
+func GetButtonChan() chan bool {
+	return buttonChannel
 }
 
 func readFrame() DataFrame {

@@ -42,9 +42,9 @@ func InitCam(autoExposure bool) error {
 		panic("mm-anki-camera service doesn't exist. is this an Anki Vector?")
 	}
 	if !strings.Contains(string(file), "mm-anki-camera -r 1") {
-		fmt.Println("vcam: Adding -r 1 to mm-anki-camera service file for faster framerate...")
-		original := `ExecStart=/usr/bin/mm-anki-camera $MM_ANKI_CAMERA_OPTS`
-		replacement := `ExecStart=/usr/bin/mm-anki-camera -r 1 $MM_ANKI_CAMERA_OPTS`
+		fmt.Println("vcam: Adding -r 1 to mm-anki-camera service file for faster framerate (only happens on first init)...")
+		original := `/usr/bin/mm-anki-camera $MM_ANKI_CAMERA_OPTS`
+		replacement := `/usr/bin/mm-anki-camera -r 1 $MM_ANKI_CAMERA_OPTS`
 		err := exec.Command("sudo", "sed", "-i", fmt.Sprintf("s|%s|%s|g", original, replacement), "/lib/systemd/system/mm-anki-camera.service").Run()
 		if err != nil {
 			fmt.Println("failed to execute sed command:", err)

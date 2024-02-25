@@ -4,8 +4,8 @@ ABSPATH="$(pwd)"
 
 
 if [[ $TOOLCHAIN ]]; then
-	if [[ ! -f ${TOOLCHAIN}-gcc ]]; then
-		echo "The toolchain you have provided is invalid. ${TOOLCHAIN}-gcc does not exist."
+	if [[ ! -f ${TOOLCHAIN}gcc ]]; then
+		echo "The toolchain you have provided is invalid. ${TOOLCHAIN}gcc does not exist."
 		exit 1
 	fi
 else
@@ -25,7 +25,11 @@ else
 	rm -rf build
 	mkdir -p build
 	cd build
-	ARMCC_FLAGS="-mfloat-abi=softfp -mfpu=neon-vfpv4 -mcpu=cortex-a7 -O3 -ffast-math -fopenmp"
+	if [[ $TOOLCHAIN == *"gnueabihf"* ]]; then
+		ARMCC_FLAGS="-mfloat-abi=hard -mfpu=neon-vfpv4 -mcpu=cortex-a7 -O3 -ffast-math -fopenmp"
+	else
+		ARMCC_FLAGS="-mfloat-abi=softfp -mfpu=neon-vfpv4 -mcpu=cortex-a7 -O3 -ffast-math -fopenmp"
+	fi
 	ARMCC_PREFIX=${TOOLCHAIN}
 	cmake -DCMAKE_C_COMPILER=${ARMCC_PREFIX}gcc \
   	-DCMAKE_CXX_COMPILER=${ARMCC_PREFIX}g++ \
