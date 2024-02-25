@@ -179,6 +179,7 @@ func startCommsLoop() error {
 				default:
 				}
 			} else if bStatus && !fr.ButtonState {
+				bStatus = false
 				select {
 				case buttonChannel <- false:
 				default:
