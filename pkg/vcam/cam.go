@@ -14,6 +14,7 @@ import (
 	"math"
 	"os"
 	"os/exec"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -201,34 +202,59 @@ func SetExposure(ms uint16, gain float64) {
 func runAutoExposure(rawData []byte) (uint16, float64) {
 	width := 1280
 	height := 720
-
-	var sumBrightness, maxBrightness float64
-	var pixelCount int
+	// debayering, go style
+	rgbImage := make([][][]uint8, height/2)
+	for i := range rgbImage {
+		rgbImage[i] = make([][]uint8, width/2)
+		for j := range rgbImage[i] {
+			rgbImage[i][j] = make([]uint8, 3)
+		}
+	}
 
 	for y := 0; y < height; y += 2 {
 		for x := 0; x < width; x += 2 {
 			idxRaw := (y*width + x) / 4 * 5
+			idxY := y / 2
+			idxX := x / 2
 
-			g1 := ((uint16(rawData[idxRaw+1]) << 2) | ((uint16(rawData[idxRaw+4]) >> 4) & 0x03)) >> 2 // Simplified
+			r := (uint16(rawData[idxRaw+0]) << 2) | ((uint16(rawData[idxRaw+4]) >> 6) & 0x03)
+			g1 := (uint16(rawData[idxRaw+1]) << 2) | ((uint16(rawData[idxRaw+4]) >> 4) & 0x03)
+			g2 := (uint16(rawData[idxRaw+2]) << 2) | ((uint16(rawData[idxRaw+4]) >> 2) & 0x03)
+			b := (uint16(rawData[idxRaw+3]) << 2) | ((uint16(rawData[idxRaw+4]) >> 0) & 0x03)
 
-			brightness := float64(g1)
-			sumBrightness += brightness
-			if brightness > maxBrightness {
-				maxBrightness = brightness
-			}
-			pixelCount++
+			g := (g1 + g2) >> 1
+
+			rgbImage[idxY][idxX][0] = uint8(r >> 2)
+			rgbImage[idxY][idxX][1] = uint8(g >> 2)
+			rgbImage[idxY][idxX][2] = uint8(b >> 2)
 		}
 	}
 
-	meanBrightness := sumBrightness / float64(pixelCount)
+	// brightest spot alg
+	brightnessValues := make([]float64, 0, (height/2)*(width/2))
+	sumBrightness := 0.0
+	for _, row := range rgbImage {
+		for _, pixel := range row {
+			brightness := float64(pixel[0]+pixel[1]+pixel[2]) / 3.0
+			brightnessValues = append(brightnessValues, brightness)
+			sumBrightness += brightness
+		}
+	}
+
+	sort.Float64s(brightnessValues)
+	percentile95 := brightnessValues[int(0.95*float64(len(brightnessValues)))]
+
+	meanBrightness := sumBrightness / float64(len(brightnessValues))
 
 	targetBrightness := 130.0
-	referenceBrightness := 0.7*maxBrightness + 0.3*meanBrightness
+
+	referenceBrightness := 0.7*percentile95 + 0.3*meanBrightness
+
 	exposureMsFloat := 100 * (targetBrightness - referenceBrightness) / targetBrightness
-	exposureMs := uint16(math.Max(1, math.Min(100, exposureMsFloat)))
+	exposureMs := uint16(math.Max(1, math.Min(100, exposureMsFloat))) // 100 seems to be effective max
+
 	gain := 4 * (targetBrightness - referenceBrightness) / targetBrightness
 	gain = math.Max(0, math.Min(5, gain))
-
 	SetExposure(exposureMs, gain)
 
 	return exposureMs, gain
