@@ -34,3 +34,14 @@ func RGGB10ToJPEGDownSample(rawData []byte, quality int) []byte {
 	C.free(unsafe.Pointer(jpegBuf))
 	return jpegData
 }
+
+func FrameOnScreen(rawFrame []byte) []uint16 {
+	oriWidth, oriHeight := 1280, 720
+	newWidth, newHeight := 186, 94
+	outputSize := newWidth * newHeight
+	output := make([]uint16, outputSize)
+
+	C.frameToScreen((*C.uint8_t)(&rawFrame[0]), (*C.uint16_t)(&output[0]), C.int(oriWidth), C.int(oriHeight), C.int(newWidth), C.int(newHeight))
+
+	return output
+}

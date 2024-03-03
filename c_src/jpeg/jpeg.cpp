@@ -6,6 +6,7 @@
 #include <iostream>
 #include <chrono>
 #include <omp.h>
+#include <cstdint>
 
 void encodeToJPEG(unsigned char* yuvData, int width, int height, int quality, unsigned char** jpegBuf, unsigned long* jpegSize) {
     tjhandle tjInstance = tjInitCompress();
@@ -23,6 +24,29 @@ void encodeToJPEG(unsigned char* yuvData, int width, int height, int quality, un
         fprintf(stderr, "Error with TJ compression: %s\n", tjGetErrorStr());
     }
     tjDestroy(tjInstance);
+}
+
+void frameToScreen(const uint8_t* rawData, uint16_t* output, int oriWidth, int oriHeight, int newWidth, int newHeight) {
+    // Downsample directly without explicit debayer process due to averaging green
+    #pragma omp parallel for collapse(2)
+    for (int y = 0; y < newHeight; ++y) {
+        for (int x = 0; x < newWidth; ++x) {
+            int srcX = x * oriWidth / newWidth;
+            int srcY = y * oriHeight / newHeight;
+            int idxRaw = (srcY * oriWidth + srcX) / 4 * 5; // Indexing into the raw data accounting for RAW10 packing
+
+            // Unpacking the RGGB values from RAW10 format
+            uint16_t r = (uint16_t(rawData[idxRaw]) << 2) | (rawData[idxRaw + 4] >> 6 & 0x03);
+            uint16_t g1 = (uint16_t(rawData[idxRaw + 1]) << 2) | (rawData[idxRaw + 4] >> 4 & 0x03);
+            uint16_t g2 = (uint16_t(rawData[idxRaw + 2]) << 2) | (rawData[idxRaw + 4] >> 2 & 0x03);
+            uint16_t b = (uint16_t(rawData[idxRaw + 3]) << 2) | (rawData[idxRaw + 4] & 0x03);
+            uint16_t g = (g1 + g2) >> 1; // Averages the two green values
+
+            // Combining into a single RGB565 pixel
+            uint16_t pixel = ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3);
+            output[y * newWidth + x] = pixel;
+        }
+    }
 }
 
 /*

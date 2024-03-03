@@ -35,7 +35,7 @@ libjpeg-turbo:
 
 jpeg_interface:
 	mkdir -p build
-	$(TOOLCHAIN)g++ $(GPP_FLAGS) $(COMMON_FLAGS) -o build/libjpeg_interface.so c_src/jpeg/jpeg.cpp -Ilibjpeg-turbo -fopenmp
+	$(TOOLCHAIN)g++ $(GPP_FLAGS) $(COMMON_FLAGS) -o build/libjpeg_interface.so c_src/jpeg/jpeg.cpp -Ilibjpeg-turbo -fopenmp -static-libstdc++
 
 example:
 	CC="$(TOOLCHAIN)gcc" \

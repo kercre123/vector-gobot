@@ -11,7 +11,7 @@ extern "C" {
 
 void encodeToJPEG(unsigned char* yuvData, int width, int height, int quality, unsigned char** jpegBuf, unsigned long* jpegSize);
 void GetFrameAsJPEGDownSampled(const uint8_t* rawData, int width, int height, int quality, uint8_t** jpegBuf, unsigned long* jpegSize);
-
+void frameToScreen(const uint8_t* rawData, uint16_t* output, int oriWidth, int oriHeight, int newWidth, int newHeight);
 
 #ifdef __cplusplus
 }

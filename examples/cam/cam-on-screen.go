@@ -3,9 +3,9 @@ package main
 import (
 	"fmt"
 	"os"
-	"time"
 
 	"github.com/kercre123/vector-gobot/pkg/vcam"
+	"github.com/kercre123/vector-gobot/pkg/vjpeg"
 	"github.com/kercre123/vector-gobot/pkg/vscreen"
 )
 
@@ -39,20 +39,13 @@ func main() {
 	vscreen.InitLCD()
 	vscreen.BlackOut()
 	fmt.Println("Show camera data on screen...")
-	ticker := time.NewTicker(33 * time.Millisecond)
-	defer ticker.Stop()
 
 	for {
-		select {
-		case <-ticker.C:
-			frame, err := vcam.GetFrame()
-			if err != nil {
-				fmt.Println("error getting frame: ", err)
-				os.Exit(1)
-			}
-			scrnData := GetFrameAsUint16Array(frame, 1280, 720)
-			vscreen.SetScreen(scrnData)
-			//time.Sleep(time.Millisecond * 20)
+		frame, err := vcam.GetFrame()
+		if err != nil {
+			fmt.Println("error getting frame: ", err)
+			os.Exit(1)
 		}
+		vscreen.SetScreen(vjpeg.FrameOnScreen(frame))
 	}
 }
