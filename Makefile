@@ -12,8 +12,12 @@ endif
 
 ifneq (,$(findstring gnueabihf,$(TOOLCHAIN)))
     COMMON_FLAGS := -O3 -mfpu=neon-vfpv4 -mfloat-abi=hard -mcpu=cortex-a7 -ffast-math
-else
+else ifneq (,$(findstring gnueabi,$(TOOLCHAIN)))
     COMMON_FLAGS := -O3 -mfpu=neon-vfpv4 -mfloat-abi=softfp -mcpu=cortex-a7 -ffast-math
+else ifneq (,$(findstring aarch64,$(TOOLCHAIN)))
+    COMMON_FLAGS := -O3 -ffast-math
+else
+    COMMON_FLAGS := -O3 -ffast-math -fpermissive
 endif
 
 GPP_FLAGS := -w -shared -Iinclude -fPIC -std=c++11

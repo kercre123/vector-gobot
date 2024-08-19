@@ -11,6 +11,8 @@ import (
 	"time"
 )
 
+var ReadOnly bool = false
+
 const (
 	LED_GREEN = 0x00FF00
 	LED_RED   = 0x0000FF
@@ -140,19 +142,37 @@ func startCommsLoop() error {
 	frameChannel = make(chan DataFrame, 1)
 	var frameChannelForButton = make(chan DataFrame, 1)
 
+	if !ReadOnly {
+		go func() {
+			ticker := time.NewTicker(time.Millisecond * 10)
+			defer ticker.Stop()
+			seq := 8888
+			for range ticker.C {
+				if !spineInited {
+					return
+				}
+				var motors []int16 = []int16{motor1, motor2, motor3, motor4}
+				var leds []uint32 = []uint32{backLEDStatus, middleLEDStatus, frontLEDStatus, frontLEDStatus}
+				C.spine_full_update(C.uint32_t(seq), (*C.int16_t)(&motors[0]), (*C.uint32_t)(&leds[0]))
+			}
+		}()
+	}
+	targetDuration := time.Second / 220
+
 	go func() {
-		ticker := time.NewTicker(time.Millisecond * 10)
-		defer ticker.Stop()
-		seq := 8888
-		for range ticker.C {
+		var accumulatedError time.Duration
+
+		for {
+			start := time.Now()
+
 			if !spineInited {
 				return
 			}
-			var motors []int16 = []int16{motor1, motor2, motor3, motor4}
-			var leds []uint32 = []uint32{backLEDStatus, middleLEDStatus, frontLEDStatus, frontLEDStatus}
-			C.spine_full_update(C.uint32_t(seq), (*C.int16_t)(&motors[0]), (*C.uint32_t)(&leds[0]))
+
+			// read frame
 			frame := readFrame()
-			// why is this able to handle dropped frames and just frameChannel <- frame on its own doesn't?
+
+			// send to channels
 			select {
 			case frameChannel <- frame:
 			default:
@@ -160,6 +180,17 @@ func startCommsLoop() error {
 			select {
 			case frameChannelForButton <- frame:
 			default:
+			}
+
+			elapsed := time.Since(start)
+
+			sleepDuration := targetDuration - elapsed + accumulatedError
+
+			if sleepDuration > 0 {
+				time.Sleep(sleepDuration)
+				accumulatedError = 0
+			} else {
+				accumulatedError += sleepDuration
 			}
 		}
 	}()
@@ -272,11 +303,8 @@ func readFrame() DataFrame {
 	returnFrame.ProxSampleCount = uint16(df.prox_sample_count)
 	returnFrame.ProxCalibResult = uint32(df.prox_calibration_result)
 	//returnFrame.ProxRealMM = uint16(float64(returnFrame.ProxRawRangeMM) * (float64(returnFrame.ProxSignalRateMCPS) / float64(returnFrame.ProxAmbient)))
-	switch {
-	case df.buttton_state > 0:
+	if df.buttton_state > 0 {
 		returnFrame.ButtonState = true
-	default:
-		returnFrame.ButtonState = false
 	}
 	returnFrame.MicData = []int16{}
 	for _, data := range df.mic_data {
