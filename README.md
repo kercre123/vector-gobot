@@ -45,6 +45,8 @@ go build -o build/main examples/body/readout.go
 ```
 
 -   You can define your own toolchain. Just make sure the same one used to build the libs is also the one you are using to build the Go program. Example: `TOOLCHAIN=$HOME/vchain/arm-linux-gnueabi/bin/arm-linux-gnueabi- make`
+-   If you want to build for x86/native, do `TOOLCHAIN=" " make`
+    -    For body communication on x86, you will have to run something like `sudo ln -s /dev/ttyUSB0 /dev/ttyHS0` before trying anything out
 
 ## Installing a program on a bot
 
