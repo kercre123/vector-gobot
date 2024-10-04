@@ -2,9 +2,11 @@ COMPILEFILE := ./examples/body/readout.go
 
 ABSPATH := $(shell pwd)
 
-ifeq ($(TOOLCHAIN),)
+ifeq ($(GCC),)
   TOOLCHAIN_DIR := $(ABSPATH)/vic-toolchain/arm-linux-gnueabi/bin
   TOOLCHAIN := $(TOOLCHAIN_DIR)/arm-linux-gnueabi-
+  GCC := ${TOOLCHAIN}gcc
+  GPP := ${TOOLCHAIN}g++
   ifeq ($(shell test -d $(dir $(TOOLCHAIN_DIR)) && echo yes),)
     $(error The directory $(dir $(TOOLCHAIN_DIR)) does not exist. You must define a $$TOOLCHAIN or follow the README instructions to get a toolchain.)
   endif
@@ -20,14 +22,14 @@ else
     COMMON_FLAGS := -O3 -ffast-math -fpermissive
 endif
 
-GPP_FLAGS := -w -shared -Iinclude -fPIC -std=c++11
+GPP_FLAGS := -w -shared -Iinclude -fPIC -std=c++11 -Wno-c++11-narrowing
 
 all: vector-gobot jpeg_interface
 	echo "Successfully compiled libvector-gobot.so and libjpeg_interface.so to ./build."
 
 vector-gobot:
 	mkdir -p build
-	$(TOOLCHAIN)g++ \
+	$(GPP) \
 	$(GPP_FLAGS) $(COMMON_FLAGS) \
 	-o build/libvector-gobot.so \
 	c_src/*.cpp \
@@ -39,10 +41,10 @@ libjpeg-turbo:
 
 jpeg_interface:
 	mkdir -p build
-	$(TOOLCHAIN)g++ $(GPP_FLAGS) $(COMMON_FLAGS) -o build/libjpeg_interface.so c_src/jpeg/jpeg.cpp -Ilibjpeg-turbo -fopenmp -static-libstdc++
+	$(GPP) $(GPP_FLAGS) $(COMMON_FLAGS) -o build/libjpeg_interface.so c_src/jpeg/jpeg.cpp -Ilibjpeg-turbo -fopenmp -static-libstdc++
 
 example:
-	CC="$(TOOLCHAIN)gcc" \
+	CC="$(GCC)" \
 	CGO_LDFLAGS="-Lbuild" \
 	GOARM=7 \
 	GOARCH=arm \
