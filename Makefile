@@ -31,6 +31,7 @@ vector-gobot:
 	mkdir -p build
 	$(GPP) \
 	$(GPP_FLAGS) $(COMMON_FLAGS) \
+	-latomic \
 	-o build/libvector-gobot.so \
 	c_src/*.cpp \
 	c_src/libs/*.cpp
