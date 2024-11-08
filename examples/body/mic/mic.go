@@ -161,6 +161,7 @@ func increaseVolume(input []int16, factor int16) []int16 {
 	return output
 }
 
+// originally intended to smash the data from all mics into one stream, but i couldn't get it working
 func smashPCM(input []int16) []int16 {
 	if len(input) != 320 {
 		panic("gotta be 320 m8")

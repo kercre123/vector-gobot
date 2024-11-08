@@ -157,22 +157,25 @@ func startCommsLoop() error {
 			}
 		}()
 	}
-	targetDuration := time.Second / 220
 
+	var returnFrame bool
+
+	// we HAVE to keep the tty buffer from stalling, which means we have to get frames very quickly :/
 	go func() {
-		var accumulatedError time.Duration
-
 		for {
-			start := time.Now()
+			// only return half the frames
 
 			if !spineInited {
 				return
 			}
 
-			// read frame
 			frame := readFrame()
+			if !returnFrame {
+				returnFrame = true
+				break
+			}
+			returnFrame = false
 
-			// send to channels
 			select {
 			case frameChannel <- frame:
 			default:
@@ -180,17 +183,6 @@ func startCommsLoop() error {
 			select {
 			case frameChannelForButton <- frame:
 			default:
-			}
-
-			elapsed := time.Since(start)
-
-			sleepDuration := targetDuration - elapsed + accumulatedError
-
-			if sleepDuration > 0 {
-				time.Sleep(sleepDuration)
-				accumulatedError = 0
-			} else {
-				accumulatedError += sleepDuration
 			}
 		}
 	}()
