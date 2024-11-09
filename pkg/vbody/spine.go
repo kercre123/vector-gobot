@@ -172,7 +172,7 @@ func startCommsLoop() error {
 			frame := readFrame()
 			if !returnFrame {
 				returnFrame = true
-				break
+				continue
 			}
 			returnFrame = false
 
