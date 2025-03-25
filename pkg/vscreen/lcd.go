@@ -219,7 +219,7 @@ func CreateTextImageFromLines(lines []Line) []uint16 {
 		d.Src = &image.Uniform{line.Color}
 		d.Dot.X = 0
 		d.DrawString(line.Text)
-		d.Dot.Y += fixed.I(13) // move down for the next line
+		d.Dot.Y += fixed.I(13)
 	}
 
 	pixels := make([]uint16, W*H)

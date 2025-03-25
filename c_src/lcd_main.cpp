@@ -15,6 +15,8 @@ int lcd_spi;
 #define LINE_SIZE_MIDAS  LCD_FRAME_WIDTH_MIDAS
 #define LINES_MIDAS      LCD_FRAME_HEIGHT_MIDAS
 
+bool midas;
+
 extern "C" void core_common_on_exit(void)
 {
   lcd_shutdown();
@@ -22,10 +24,15 @@ extern "C" void core_common_on_exit(void)
 
 void init_lcd() {
     lcd_spi = lcd_init();
+    midas = IsXray();
 }
 
 void set_pixels(uint16_t *pixels) {
-    lcd_draw_frame2(pixels, BUF_SZ * 2);
+    if (midas) {
+        lcd_draw_frame2(pixels, BUF_SZ_MIDAS * 2);
+    } else {
+        lcd_draw_frame2(pixels, BUF_SZ * 2);
+    }
 }
 
 // void set_pixels_midas(uint16_t *pixels) {
