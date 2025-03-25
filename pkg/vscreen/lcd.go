@@ -77,7 +77,7 @@ func BlackOut() error {
 	}
 	pixels := make([]uint16, bufSize)
 	for i := range pixels {
-		pixels[i] = 0x0000FF
+		pixels[i] = 0x000000
 	}
 	SetScreen(pixels)
 	return nil
