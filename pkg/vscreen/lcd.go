@@ -10,7 +10,6 @@ import (
 	"image"
 	"image/color"
 	"image/draw"
-	"os/exec"
 	"strings"
 
 	"golang.org/x/image/font"
@@ -19,16 +18,22 @@ import (
 )
 
 var screenInitted bool
+var isMidas bool
 
 /*
 Init the LCD. This must be run before any screen functions are run.
 */
 func InitLCD() {
-	exec.Command("/bin/bash", "-c", "chmod 666 /sys/module/spidev/parameters/bufsiz").Run()
-	exec.Command("/bin/bash", "-c", "echo 35328 > /sys/module/spidev/parameters/bufsiz").Run()
-	exec.Command("/bin/bash", "-c", "chmod 444 /sys/module/spidev/parameters/bufsiz").Run()
+	// exec.Command("/bin/bash", "-c", "chmod 666 /sys/module/spidev/parameters/bufsiz").Run()
+	// exec.Command("/bin/bash", "-c", "echo 35328 > /sys/module/spidev/parameters/bufsiz").Run()
+	// exec.Command("/bin/bash", "-c", "chmod 444 /sys/module/spidev/parameters/bufsiz").Run()
 	C.init_lcd()
 	screenInitted = true
+	var err error
+	isMidas, err = IsMidas()
+	if err != nil {
+		panic(err)
+	}
 	BlackOut()
 }
 
@@ -64,9 +69,15 @@ func BlackOut() error {
 	if !screenInitted {
 		return errors.New("init screen first")
 	}
-	pixels := make([]uint16, 184*96)
+	var bufSize int
+	if isMidas {
+		bufSize = 160 * 80
+	} else {
+		bufSize = 184 * 96
+	}
+	pixels := make([]uint16, bufSize)
 	for i := range pixels {
-		pixels[i] = 0x000000
+		pixels[i] = 0x0000FF
 	}
 	SetScreen(pixels)
 	return nil
@@ -76,7 +87,15 @@ func BlackOut() error {
 Create screen data from text. It will automatically wrap
 */
 func CreateTextImage(text string) []uint16 {
-	const W, H = 184, 96
+	var W int
+	var H int
+	if isMidas {
+		W = 160
+		H = 80
+	} else {
+		W = 184
+		H = 96
+	}
 	img := image.NewRGBA(image.Rect(0, 0, W, H))
 	black := color.RGBA{0, 0, 0, 255}
 	white := color.RGBA{255, 255, 255, 255}
@@ -117,7 +136,15 @@ func CreateTextImage(text string) []uint16 {
 Create screen data from a slice of text
 */
 func CreateTextImageFromSlice(lines []string) []uint16 {
-	const W, H = 184, 96
+	var W int
+	var H int
+	if isMidas {
+		W = 160
+		H = 80
+	} else {
+		W = 184
+		H = 96
+	}
 	img := image.NewRGBA(image.Rect(0, 0, W, H))
 	black := color.RGBA{0, 0, 0, 255}
 	white := color.RGBA{255, 255, 255, 255}
@@ -165,7 +192,15 @@ A line is defined as:
 	}
 */
 func CreateTextImageFromLines(lines []Line) []uint16 {
-	const W, H = 184, 96
+	var W int
+	var H int
+	if isMidas {
+		W = 160
+		H = 80
+	} else {
+		W = 184
+		H = 96
+	}
 	img := image.NewRGBA(image.Rect(0, 0, W, H))
 	black := color.RGBA{0, 0, 0, 255}
 	white := color.RGBA{255, 255, 255, 255}
@@ -201,7 +236,7 @@ func CreateTextImageFromLines(lines []Line) []uint16 {
 }
 
 /*
-Applies data to the screen
+Applies data to 1.0 screen
 */
 func SetScreen(pixels []uint16) error {
 	if !screenInitted {
@@ -209,6 +244,17 @@ func SetScreen(pixels []uint16) error {
 	}
 	C.set_pixels((*C.uint16_t)(&pixels[0]))
 	return nil
+}
+
+/*
+Is this a 2.0 screen?
+*/
+func IsMidas() (bool, error) {
+	if !screenInitted {
+		return false, errors.New("screen is not inited")
+	}
+	is := bool(C.is_midas())
+	return is, nil
 }
 
 func StopLCD() {

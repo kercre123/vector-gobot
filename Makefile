@@ -13,7 +13,7 @@ ifeq ($(GCC),)
 endif
 
 ifneq (,$(findstring gnueabihf,$(TOOLCHAIN)))
-    COMMON_FLAGS := -O3 -mfpu=neon-vfpv4 -mfloat-abi=hard -mcpu=cortex-a7 -ffast-math
+    COMMON_FLAGS := -O3 -mfpu=neon-vfpv4 -mfloat-abi=hard -mcpu=cortex-a7 -ffast-math -fpermissive
 else ifneq (,$(findstring gnueabi,$(TOOLCHAIN)))
     COMMON_FLAGS := -O3 -mfpu=neon-vfpv4 -mfloat-abi=softfp -mcpu=cortex-a7 -ffast-math
 else ifneq (,$(findstring aarch64,$(TOOLCHAIN)))
@@ -23,18 +23,18 @@ else
 endif
 
 GPP_FLAGS := -w -shared -Iinclude -fPIC -std=c++11 -Wno-c++11-narrowing
+GCC_FLAGS := -w -shared -Iinclude -fPIC
 
-all: vector-gobot jpeg_interface
+all: vector-gobot
 	echo "Successfully compiled libvector-gobot.so and libjpeg_interface.so to ./build."
 
 vector-gobot:
 	mkdir -p build
-	$(GPP) \
-	$(GPP_FLAGS) $(COMMON_FLAGS) \
-	-latomic \
-	-o build/libvector-gobot.so \
-	c_src/*.cpp \
-	c_src/libs/*.cpp
+	$(GPP) $(GPP_FLAGS) $(COMMON_FLAGS) -fPIC -c c_src/*.cpp c_src/libs/*.cpp
+	$(GCC) $(GCC_FLAGS) $(COMMON_FLAGS) -fPIC -c c_src/libs/*.c
+	$(GPP) $(GPP_FLAGS) $(COMMON_FLAGS) -shared -latomic -o build/libvector-gobot.so *.o
+	rm -f *.o
+
 
 libjpeg-turbo:
 	mkdir -p build

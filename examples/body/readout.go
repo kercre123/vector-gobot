@@ -9,6 +9,8 @@ import (
 	"github.com/kercre123/vector-gobot/pkg/vscreen"
 )
 
+var isMidas bool
+
 func main() {
 	fmt.Println("Initing body...")
 	err := vbody.InitSpine()
@@ -18,6 +20,12 @@ func main() {
 	}
 	fmt.Println("Initing screen...")
 	vscreen.InitLCD()
+	isMidas, err = vscreen.IsMidas()
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	fmt.Println(isMidas)
 	vbody.SetLEDs(vbody.LED_BLUE, vbody.LED_BLUE, vbody.LED_BLUE)
 	fmt.Println("Show readout of sensor values on screen for 10 seconds...")
 	exit := false

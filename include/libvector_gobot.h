@@ -2,6 +2,7 @@
 #define __LIBVECTOR_GOBOT_H
 
 #include <stdint.h>
+#include <stdbool.h>
 #include "spine.h"
 
 #ifdef __cplusplus
@@ -14,6 +15,8 @@ void spine_full_update(uint32_t seq, int16_t* motors_data, uint32_t* leds_data);
 spine_dataframe_t iterate();
 void init_lcd();
 void set_pixels(uint16_t *pixels);
+void set_pixels_midas(uint16_t *pixels);
+bool is_midas();
 
 typedef struct IMUData {
     float gx;
